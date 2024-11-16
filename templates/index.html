@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Travelling Bucket List</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='forLefletToDo.css') }}" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.7/axios.min.js"
+        integrity="sha512-DdX/YwF5e41Ok+AI81HI8f5/5UsoxCVT9GKYZRIzpLxb8Twz4ZwPPX+jQMwMhNQ9b5+zDEefc+dcvQoPWGNZ3g=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.4.2/leaflet.draw.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.4.2/leaflet.draw.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+
+</head>
+
+<body>
+        <div class="head">
+            <h2>Travelling Bucket List<h2></a>
+            </div>
+
+        </div>
+    <div class="container-fluid">
+        <div id="map"></div>
+        <div class="inputForms">
+            <form action='/' method="POST">
+                <h4 class="mt-0">Add Your favourite place & description:</h4>
+
+                <div class="mb-1">
+                    <label for="placeName" class="form-label">Name of the Place</label>
+                    <input type="text" class="form-control" oninput="toggleButton()" name="placeName" id="placeName" aria-describedby="placeName" required>
+                </div>
+                <div class="mb-2">
+                    <label for="desc" class="form-label">Description</label>
+                    <input type="text" class="form-control" oninput="toggleButton()" name="desc" id="desc" required>
+                </div>
+                <div class="mb-1">
+                    <button type="button" onclick="addPoint()" class="btn btn-success btn-sm">Add Location</button>
+                </div>
+                <div class="mb-1" style="display: inline-block">
+                    <label for="xCor" >Lattitude</label>
+                    <input class="form-control" oninput="toggleButton()" name="xCor" id="xCor" readonly
+                        style="height: 35px; cursor: not-allowed;" />
+                </div>
+                <div class="mb-1" style="display: inline-block;">
+                    <label for="yCor">Longitude</label>
+                    <input class="form-control" oninput="toggleButton()" name="yCor" id="yCor" readonly
+                        style="height: 35px; cursor: not-allowed;" />
+                </div>
+                <div class="mt-1 ">
+                    <button type="submit" class="btn btn-primary btn-sm " onclick="loadMarkers()" id="submitButton"disabled>Submit</button>
+                    <button type="button" onclick="clearAll()" class="btn btn-secondary btn-sm ">Clear</button>
+                </div>
+            </form>
+
+            <h5 class ="my-3 mb-1">Your Favourite Places</h5>
+            <div class="tbContainer my-3 mb-1 text-center " style="overflow-x:auto;" >
+                
+                <table class="table table-striped-columns fs-6 ">
+                    <thead>
+                        <tr>
+                            <th scope="col">SNo</th>
+                            <th scope="col">Name</th>
+                            <th scope="col">Description</th>
+                            <th scope="col">Location</th>
+                            <th scope="col" >Edit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for place in Data %}
+                        <tr>
+                            <th scope="row">{{loop.index}}</th>
+                            <td>{{place.pName}}</td>
+                            <td>{{place.pDesc}}</td>
+                            <td>{{place.pLatLong}}</td>
+                            <td><a href="/delete/{{place.sno}}" type="button"  class="btn btn-outline-dark fw-light btn-sm">Delete</a></td>
+                            <td><a href="/update/{{place.sno}}" type="button" class="btn btn-outline-dark bfw-light mx-1 btn-sm">Update</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
+
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+            crossorigin="anonymous"></script>
+        <script>
+            var map = L.map('map', {
+                center: [23.667278, 80.828706],
+                zoom: 5
+            });
+            var file = null;
+            var basemap = null;
+            var textFile = null;
+
+            var sat = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+                maxZoom: 20,
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+            }).addTo(map);
+            
+            // Creating a a marker 
+            let markerMode = false;
+            let currentMarker = null;
+            let latLongString = null;
+            let latCor = null;
+            let lonCor = null;
+            //let latLongString1= null;
+            //function to track the map clicked event
+            function onMapClick(e){
+                if (addPoint){
+                    currentMarker = L.marker(e.latlng).addTo(map)
+                    addMarkerMode = false; 
+                    map.off('click', onMapClick);
+                    //converting latlong string to float to add in text boxes string  = e.latlng.toString() op = LatLng(x,y)
+                    latLongString = e.latlng.toString().replace("LatLng(", "").replace(")", "").split(", ");
+                    yCor = parseFloat(latLongString[0]);
+                    xCor = parseFloat(latLongString[1]);
+                    //console.log((xCor));
+
+                    //to textbox
+                    if (latLongString){
+                        document.getElementById('xCor').value = yCor;
+                        document.getElementById('yCor').value = xCor;
+                    }
+                    //alert(e.latlng.toString())
+
+                }
+            }
+            //calling a function when we click on map
+            function addPoint() {
+                //alert("Add your favourite place in the map using marker !");
+                markerMode = true;
+                map.on('click',onMapClick);
+            }
+
+            function toggleButton() {
+                const inputField = document.getElementById('placeName');
+                const descField = document.getElementById('desc');
+                const xField = document.getElementById('xCor')
+                const yField = document.getElementById('yCor')
+
+                const submitButton = document.getElementById('submitButton');
+                if (
+                    inputField.value.trim().length > 0 &&
+                    descField.value.trim().length > 0 &&
+                    xField.value.trim().length > 0 &&
+                    yField.value.trim().length > 0
+                ) {
+                    submitButton.disabled = false; // Enable button
+                } else {
+                    submitButton.disabled = true; // Disable button
+                }
+            }                
+                
+                
+            
+            function clearAll() {
+                document.getElementById('xCor').value = "";
+                document.getElementById('yCor').value = "";
+
+                if (currentMarker) {
+                    currentMarker.remove();
+                }
+            }
+            $(function () {
+                $('[data-toggle="tooltip"]').tooltip();
+            });
+
+            //function to load the data from the databaser to lthe leaflet
+            
+            function loadMarkers() {
+                fetch('/get_markers')
+                    .then(response => response.json())
+                    .then(data => {
+                        data.forEach(function(markerData) {
+                            // Create a marker for each point in the database
+                            var marker = L.marker([markerData.lat, markerData.lon]).addTo(map);
+                            marker.bindPopup(`<b>Name:</b> ${markerData.name}<br>
+                                <b>FID:</b> ${markerData.FID}<br>
+                                <b>Description:</b> ${markerData.desc}<br>
+                                <b>Latitude:</b> ${markerData.lat}<br>
+                                <b>Longitude:</b> ${markerData.lon}`);
+                            });
+                    })
+                    .catch(error => console.log('Error loading markers:', error));
+            }
+    
+            // Load markers when the page loads
+            loadMarkers();
+            
+
+            
+        </script>
+</body>
+
+</html>

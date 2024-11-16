@@ -126,8 +126,8 @@ def get_marker(sno):
     # Format the data
     oldPoint = []
     lat, lon = mark.pLatLong.split(' ')
-    lat = float(lat)  
-    long = float(lon)
+    lat = round(float(lat),5)  
+    long = round(float(lon),5) 
     oldPoint = {
         "type": "FeatureCollection",
         "features": [
@@ -159,10 +159,6 @@ def delete(sno):
 
     return redirect("/")
 
-#Support Page
-@app.route("/help")
-def supportPage():
-    return "<p>This is Help & Support Page</p>"
 
 
 if __name__ == "__main__":

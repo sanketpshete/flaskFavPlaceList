@@ -34,7 +34,7 @@
         <div class="inputForms">
             <form action='/' method="POST">
                 <h4 class="mt-0">Add Your favourite place & description:</h4>
-
+    
                 <div class="mb-1">
                     <label for="placeName" class="form-label">Name of the Place</label>
                     <input type="text" class="form-control" oninput="toggleButton()" name="placeName" id="placeName" aria-describedby="placeName" required>
@@ -57,12 +57,14 @@
                         style="height: 35px; cursor: not-allowed;" />
                 </div>
                 <div class="mt-1 ">
-                    <button type="submit" class="btn btn-primary btn-sm " onclick="loadMarkers()" id="submitButton"disabled>Submit</button>
+                    <div id="alertContainer"></div>
+                    <button type="submit" class="btn btn-primary btn-sm "  id="submitButton"disabled>Submit</button>
                     <button type="button" onclick="clearAll()" class="btn btn-secondary btn-sm ">Clear</button>
                 </div>
             </form>
 
             <h5 class ="my-3 mb-1">Your Favourite Places</h5>
+            <div id="feildDelete"></div>
             <div class="tbContainer my-3 mb-1 text-center " style="overflow-x:auto;" >
                 
                 <table class="table table-striped-columns fs-6 ">
@@ -72,7 +74,7 @@
                             <th scope="col">Name</th>
                             <th scope="col">Description</th>
                             <th scope="col">Location</th>
-                            <th scope="col" >Edit</th>
+                            <th scope="col" colspan="2" >Edits</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -92,11 +94,12 @@
         </div>
 
 
-
-
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
             integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
             crossorigin="anonymous"></script>
+
+
+
         <script>
             var map = L.map('map', {
                 center: [23.667278, 80.828706],
@@ -119,39 +122,12 @@
             let lonCor = null;
             //let latLongString1= null;
             //function to track the map clicked event
-            function onMapClick(e){
-                if (addPoint){
-                    currentMarker = L.marker(e.latlng).addTo(map)
-                    addMarkerMode = false; 
-                    map.off('click', onMapClick);
-                    //converting latlong string to float to add in text boxes string  = e.latlng.toString() op = LatLng(x,y)
-                    latLongString = e.latlng.toString().replace("LatLng(", "").replace(")", "").split(", ");
-                    yCor = parseFloat(latLongString[0]);
-                    xCor = parseFloat(latLongString[1]);
-                    //console.log((xCor));
-
-                    //to textbox
-                    if (latLongString){
-                        document.getElementById('xCor').value = yCor;
-                        document.getElementById('yCor').value = xCor;
-                    }
-                    //alert(e.latlng.toString())
-
-                }
-            }
-            //calling a function when we click on map
-            function addPoint() {
-                //alert("Add your favourite place in the map using marker !");
-                markerMode = true;
-                map.on('click',onMapClick);
-            }
-
             function toggleButton() {
                 const inputField = document.getElementById('placeName');
                 const descField = document.getElementById('desc');
-                const xField = document.getElementById('xCor')
-                const yField = document.getElementById('yCor')
-
+                const xField = document.getElementById('xCor');
+                const yField = document.getElementById('yCor');
+            
                 const submitButton = document.getElementById('submitButton');
                 if (
                     inputField.value.trim().length > 0 &&
@@ -163,10 +139,44 @@
                 } else {
                     submitButton.disabled = true; // Disable button
                 }
-            }                
-                
-                
+            }
             
+            function onMapClick(e) {
+                if (markerMode) {
+                    if (currentMarker) {
+                        currentMarker.remove();
+                    }
+                    currentMarker = L.marker(e.latlng).addTo(map);
+                    latLongString = e.latlng.toString().replace("LatLng(", "").replace(")", "").split(", ");
+                    yCor = parseFloat(latLongString[0]);
+                    xCor = parseFloat(latLongString[1]);
+            
+                    // Update the read-only fields
+                    document.getElementById('xCor').value = yCor;
+                    document.getElementById('yCor').value = xCor;
+            
+                    // Re-check the button's state
+                    toggleButton();
+                }
+            }
+            //calling a function when we click on map
+            function addPoint() {
+                markerMode = true; // Enable marker mode
+                map.on('click', onMapClick);
+                const alertContainer = document.getElementById('alertContainer');
+                alertContainer.innerHTML = `
+                    <div class="alert alert-primary alert-dismissible fade show h-10 w-100 mb-1 mt-1" role="alert" sm>
+                        Click on the map to add a marker.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                `;
+            
+                // Optional: Automatically dismiss the alert after 5 seconds
+                setTimeout(() => {
+                    alertContainer.innerHTML = ''; // Clear the alert
+                }, 5000);
+            }
+                
             function clearAll() {
                 document.getElementById('xCor').value = "";
                 document.getElementById('yCor').value = "";
@@ -200,7 +210,8 @@
     
             // Load markers when the page loads
             loadMarkers();
-            
+            window.onload = toggleButton;
+
 
             
         </script>

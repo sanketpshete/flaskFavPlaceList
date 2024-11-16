@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Update Location</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='forLefletToDo.css') }}" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.7/axios.min.js"
+        integrity="sha512-DdX/YwF5e41Ok+AI81HI8f5/5UsoxCVT9GKYZRIzpLxb8Twz4ZwPPX+jQMwMhNQ9b5+zDEefc+dcvQoPWGNZ3g=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.4.2/leaflet.draw.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/0.4.2/leaflet.draw.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg bg-body-tertiary">
+        <div class="container">
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+                aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+        </div>
+    </nav>
+    <div class="container-fluid">
+        <div id="map"></div>
+        <div class="inputForms">
+            <form action='/update/{{table.sno}}' method="POST">
+                <h5 class="mt-0">Update the place and description:</h5>
+
+                <div class="mb-1">
+                    <label for="placeName" class="form-label">Name of the Place</label>
+                    <input type="text" class="form-control" oninput="toggleButton()" value="{{ table.pName }}" name="placeName" id="placeName" aria-describedby="placeName" required>
+                </div>
+                <div class="mb-2">
+                    <label for="desc" class="form-label">Description</label>
+                    <input type="text" class="form-control" oninput="toggleButton()" value="{{ table.pDesc }}" name="desc" id="desc" required>
+                </div>
+                <div class="mb-1">
+                    <button type="button" onclick="addPoint()" class="btn btn-success btn-sm">Add New Location</button>
+                </div>
+                <div class="mb-1" style="display: inline-block">
+                    <label for="xCor" >Lattitude</label>
+                    <input type="text" class="form-control" name="lat" id="lat" value="{{ lat }}" readonly>
+                </div>
+                <div class="mb-1" style="display: inline-block;">
+                    <label for="yCor">Longitude</label>
+                    <input type="text" class="form-control" name="long" id="long" value="{{ long }}" readonly>
+                </div>
+                <div "mx-3">
+                    <button type="submit" class="btn btn-warning btn-sm" onclick="updateRow()" id="updateButton"disabled>Update</button>
+                    <button type="button" onclick="clearAll()" class="btn btn-secondary btn-sm ">Clear</button>
+                </div>
+            </form>
+
+            <div class="tbContainer my-3 mb-1 text-center" style="overflow:auto;">
+                <h5> Old Place <h5>
+                <table class="table table-striped-columns fs-6">
+                    <thead>
+                        <tr>
+                            <th scope="col">SNo</th>
+                            <th scope="col">Name</th>
+                            <th scope="col">Description</th>
+                            <th scope="col">Location</th>
+                            
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+                        <tr>
+                            <th scope="row">1</th>
+                            <td>{{table.pName}}</td>
+                            <td>{{table.pDesc}}</td>
+                            <td>{{table.pLatLong}}</td>
+                            </tr>
+                        
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+            crossorigin="anonymous"></script>
+        <script>
+            
+            let oldMarkerPoint = null;  
+            let isOldMarkerAdded = false;  
+
+            // Function to add the old marker
+            function addOldMarkerToMap() {
+                if (isOldMarkerAdded) {
+                    return;  
+                }
+
+                // Safely inject the GeoJSON object from Flask
+                const oldMarker = {{ oldPoint | tojson | safe }};
+                
+                // Create the GeoJSON layer and add it to the map
+                oldMarkerPoint = L.geoJSON(oldMarker, {
+                    onEachFeature: function(feature, layer) {
+                        const props = feature.properties;
+                        layer.bindPopup(`
+                            <b>Name:</b> ${props.name}<br>
+                            <b>FID:</b> ${props.FID}<br>
+                            <b>Description:</b> ${props.desc}<br>
+                            <b>Latitude:</b> ${props.lat}<br>
+                            <b>Longitude:</b> ${props.lon}
+                        `);
+                    }
+                }).addTo(map);  // Add the marker layer to the map
+
+                // Set the view to the coordinates of the first feature
+                const coordinates = oldMarker.features[0].geometry.coordinates;
+                map.setView([coordinates[1], coordinates[0]], 12);  // [latitude, longitude]
+                
+                // Set the flag to true indicating the marker is added
+                isOldMarkerAdded = true;
+            }
+
+            let markerMode = false;
+            let currentMarker = null;
+            
+            var map = L.map('map', {
+                center: [23.667278, 80.828706],
+                zoom: 5
+            });
+            
+            var sat = L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+                maxZoom: 20,
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+            }).addTo(map);
+            
+            function onMapClick(e) {
+                if (markerMode) {
+                    currentMarker = L.marker(e.latlng).addTo(map);
+                    markerMode = false;
+                    map.off('click', onMapClick);
+            
+                    document.getElementById('lat').value = e.latlng.lat;
+                    document.getElementById('long').value = e.latlng.lng;
+                }
+            }
+            function addPoint() {
+                document.getElementById('lat').value = "";
+                document.getElementById('long').value = "";
+            
+                if (oldMarkerPoint) {
+                    map.removeLayer(oldMarkerPoint);  // Remove old marker from map
+                    isOldMarkerAdded = false;  // Reset the flag
+                    oldMarkerPoint = null;  // Reset the layer variable
+                }
+                if (currentMarker) {
+                    currentMarker.remove();  // Remove the current marker from the map
+                    currentMarker = null;  // Reset the marker variable
+                }
+                
+                markerMode = true;
+                map.on('click', onMapClick);
+            }
+             function clearAll() {
+                document.getElementById('lat').value = "";
+                document.getElementById('long').value = "";
+            
+                if (currentMarker) {
+                    currentMarker.remove();
+                    currentMarker = null;
+                }
+                if (oldMarkerPoint){
+                map.removeLayer(oldMarkerPoint);
+                isOldMarkerAdded = false;
+                oldMarkerPoint = null;
+                }
+                // Reset markerMode to true in case we want to add a new marker again
+                markerMode = true;
+                map.on('click', onMapClick);  // Re-attach the map click event listener
+                }
+
+                function toggleButton() {
+                    const inputField = document.getElementById('placeName');
+                    const descField = document.getElementById('desc');
+                    const xField = document.getElementById('lat')
+                    const yField = document.getElementById('long')
+    
+                    const updateButton = document.getElementById('updateButton');
+                    if (
+                        inputField.value.trim().length > 0 &&
+                        descField.value.trim().length > 0 
+                    ) {
+                        updateButton.disabled = false; // Enable button
+                    } else {
+                        updateButton.disabled = true; // Disable button
+                    }
+                } 
+                
+                function updateRow(){
+
+                }
+
+                $(document).ready(function() {
+                    addOldMarkerToMap();  // Add the marker on page load
+                    toggleButton()
+                }); 
+           
+            
+        </script>
+</body>
+
+</html>
